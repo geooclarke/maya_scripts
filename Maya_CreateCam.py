@@ -1,4 +1,4 @@
-# Maya_CreateCam_v1.0.3.py
+# Maya_CreateCam_v1.0.4.py
 # features to add:   Create camera and close when hitting enter when on line edit
 #                    If setting suffix manually, the code to recognise this and not add an extra suffix
 #                    Nurbs curves as controls to make it a bit more user friendly
@@ -125,7 +125,11 @@ class GCCreateCamWindow(QtWidgets.QDialog):
         # define locator
         def createLocator(name):
             name = name
-            cmds.spaceLocator(n=name)
+            locator_size = 10
+            locator = cmds.spaceLocator(n=name)
+            cmds.setAttr(f"{locator[0]}.localScaleX", locator_size)
+            cmds.setAttr(f"{locator[0]}.localScaleY", locator_size)
+            cmds.setAttr(f"{locator[0]}.localScaleZ", locator_size)
             return name
         
         self.cam = create_camera(self.camName)
