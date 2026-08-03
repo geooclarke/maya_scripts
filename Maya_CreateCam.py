@@ -1,4 +1,4 @@
-# Maya_CreateCam_v1.0.1.py
+# Maya_CreateCam_v1.0.2.py
 # features to add:   Create camera and close when hitting enter when on line edit
 #                    If setting suffix manually, the code to recognise this and not add an extra suffix
 #                    Nurbs curves as controls to make it a bit more user friendly
@@ -73,13 +73,15 @@ class GCCreateCamWindow(QtWidgets.QDialog):
         
         def create_camera(camera_name):
             self.create_rendercam = cmds.camera()
+
             if len(camera_name) > 0:
                 self.rename_cam = cmds.rename(self.create_rendercam[0], f"{camera_name}#")
-                
+            # setting up a few basic camera settings 
+            cmds.setAttr(f"{self.create_rendercam[0]}.locatorScale", 10)                
+            cmds.setAttr(f"{self.create_rendercam[0]}.translateZ", 10)
             self.cam_main = cmds.ls(sl=True)
             self.camera_shape = cmds.listRelatives(self.cam_main, children=True)
             self.camera_list = [self.cam_main[0], self.camera_shape[0]]
-            print(f"self.camera_list: {self.camera_list}")
             self.camera_attrs = ['translate', 'rotate']
             self.camera_axis = ['X', 'Y']
             
