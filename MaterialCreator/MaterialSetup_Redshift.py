@@ -7,7 +7,6 @@ from maya import cmds
 
 def createMaterial(self, name):
 
-    self.selectedObjects = cmds.ls(sl=True)
     self.materialCustomPrefix = self.get_material_prefix_name()
     self.materialCustomSuffix = self.get_material_suffix_name()
 
@@ -18,7 +17,6 @@ def createMaterial(self, name):
         self.materialCustomSuffix = ""
 
     self.full_name = f"{self.materialCustomPrefix}{self.materialCustomSuffix}#"
-    print(self.full_name)
 
     # creating variables for each file path
     self.base_colour_file = self.base_colour_file_path()
@@ -132,9 +130,4 @@ def createMaterial(self, name):
         cmds.connectAttr(f"{self.displacementNode}.out", f"{self.materialNode[1]}.displacementShader")
         if self.displacement_UDIM_cb.isChecked():
             cmds.setAttr(f"{self.displacementFile}.uvTilingMode", 3)
-
-    if self.assign_obj_cb.isChecked():
-        for object in self.selectedObjects:
-            cmds.select(object)
-            cmds.hyperShade(assign=self.materialNode[0])
 

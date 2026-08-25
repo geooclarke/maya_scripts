@@ -1,7 +1,4 @@
-import os
-import re
 from maya import cmds
-import keywords
 
 # ============================================================
 # LOAD VRAY
@@ -26,16 +23,16 @@ def create_texture_node(name, filepath, raw=False):
     cmds.connectAttr(f"{place}.outUvFilterSize", f"{file_node}.uvFilterSize", f=True)
 
     cmds.setAttr(f"{file_node}.fileTextureName", filepath, type="string")
-    cmds.setAttr(f"{file_node}.colorSpace", "Utility - sRGB - Texture", type="string")
-    cmds.setAttr(f"{file_node}.ignoreColorSpaceFileRules", 1)
-
-    cmds.connectAttr(f"{file_node}.outColor", f"{colour_correction}.texture_map", f=True)
-
     if raw:
         try:
             cmds.setAttr(f"{file_node}.colorSpace", "Utility - Raw", type="string")
         except:
-            pass
+            cmds.setAttr(f"{file_node}.colorSpace", "Utility - sRGB - Texture", type="string")
+    cmds.setAttr(f"{file_node}.ignoreColorSpaceFileRules", 1)
+
+    cmds.connectAttr(f"{file_node}.outColor", f"{colour_correction}.texture_map", f=True)
+
+
 
     return colour_correction
 
@@ -52,15 +49,15 @@ def build_material(material_name, data):
     # Base Color
     # ----------------------------------
 
-    if "basecolor" in data:
-        color_file = create_texture_node(f"{material_name}_Color", data["basecolor"])
+    if "base_colour" in data:
+        color_file = create_texture_node(f"{material_name}_colour", data["base_colour"])
         color_output = color_file + ".texture_map"
         # AO multiply if found
 
         if "ao" in data:
             ao_file = create_texture_node(material_name + "_AO", data["ao"], raw=True)
 
-            layered = cmds.shadingNode("VRayLayeredTex", asTexture=True, name=material_name + "_Layered")
+            layered = cmds.shadingNode("VRayLayeredTex", asTexture=True, name=material_name + "_ao_layered")
 
             cmds.connectAttr(f"{color_file}.outColor", f"{layered}.layers[0].tex", f=True)
             cmds.connectAttr(f"{ao_file}.outColor", f"{layered}.layers[1].tex", f=True)
@@ -76,7 +73,7 @@ def build_material(material_name, data):
     # ----------------------------------
 
     if "opacity" in data:
-        opacity = create_texture_node(f"{material_name}_Opacity", data["opacity"], raw=True)
+        opacity = create_texture_node(f"{material_name}_opacity", data["opacity"], raw=True)
         cmds.connectAttr(f"{opacity}.outColor", f"{shader}.opacityMap", f=True)
 
     # ----------------------------------
@@ -84,7 +81,7 @@ def build_material(material_name, data):
     # ----------------------------------
 
     if "emission" in data:
-        emission = create_texture_node(f"{material_name}_Emission", data["emission"])
+        emission = create_texture_node(f"{material_name}_emission", data["emission"])
         cmds.connectAttr(f"{emission}.outColor", f"{shader}.illumColor", f=True)
         cmds.setAttr(f"{shader}.illumGI", 1)
 
@@ -93,7 +90,7 @@ def build_material(material_name, data):
     # ----------------------------------
 
     if "roughness" in data:
-        rough = create_texture_node(f"{material_name}_Roughness", data["roughness"], raw=True)
+        rough = create_texture_node(f"{material_name}_roughness", data["roughness"], raw=True)
         try:
             cmds.setAttr(f"{shader}.useRoughness", 1)
             cmds.setAttr(f"{shader}.reflectionColor", 1, 1, 1, type="double3")
@@ -106,7 +103,7 @@ def build_material(material_name, data):
     # ----------------------------------
 
     if "metalness" in data:
-        metal = create_texture_node(f"{material_name}_Metalness", data["metalness"], raw=True)
+        metal = create_texture_node(f"{material_name}_metalness", data["metalness"], raw=True)
         try:
             cmds.connectAttr(f"{metal}.outAlpha", f"{shader}.metalness", f=True)
         except:
@@ -117,8 +114,8 @@ def build_material(material_name, data):
     # ----------------------------------
 
     if "normal" in data:
-        normal_file = create_texture_node(material_name + "_Normal", data["normal"], raw=True)
-        bump_node = cmds.shadingNode("bump2d", asUtility=True, name=material_name + "_Normal_Bump")
+        normal_file = create_texture_node(material_name + "_normal", data["normal"], raw=True)
+        bump_node = cmds.shadingNode("bump2d", asUtility=True, name=material_name + "_normal_bump")
         # Set bump node to Tangent Space Normals
         cmds.setAttr(bump_node + ".bumpInterp", 1)
         cmds.connectAttr(normal_file + ".outAlpha", bump_node + ".bumpValue", force=True)
@@ -128,9 +125,9 @@ def build_material(material_name, data):
     # Height / Displacement
     # ----------------------------------
 
-    if "height" in data:
+    if "displacement" in data:
 
-        disp_file = create_texture_node(f"{material_name}_Displacement", data["height"], raw=True)
+        disp_file = create_texture_node(f"{material_name}_displacement", data["displacement"], raw=True)
         cmds.connectAttr(f"{disp_file}.outColor", f"{sg}.displacementShader", f=True)
 
     return shader

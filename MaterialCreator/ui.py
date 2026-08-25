@@ -1,9 +1,11 @@
 import maya.cmds as cmds
 import sys
+import os
 import maya.OpenMayaUI as omui
 
-from MaterialCreator import Maya_MaterialSetup_Redshift
-from MaterialCreator import Maya_MaterialSetup_Vray
+from MaterialCreator import MaterialSetup_Redshift
+from MaterialCreator import MaterialSetup_Vray
+from MaterialCreator import keywords
 
 try:
     # Qt5
@@ -33,13 +35,14 @@ class MainToolWindow(QtWidgets.QDialog):
     image_filters = "tif (*.tif *.tiff);; png (*.png);; \
     jpeg (*.jpeg *.jpg *.jp2);; exr (*.exr);; hdr (*.hdr);; tga (*.tga)"
 
-    base_colour_filters = ["diffuse", "Diffuse", "base_colour", "albedo", "Albedo", "baseColour", "base_color",
-                           "baseColor", "BaseColour", "diff"]
-    metallic_filters = ["metallic", "metalness", "Metalness", "Metallic"]
-    roughness_filters = ["roughness", "Roughness", "Reflection", "reflection", "rough"]
-    normal_filters = ["normal", "bump", "Normal", "Bump", "nor"]
-    opacity_filters = ["opacity", "Opacity"]
-    displacement_filters = ["displacement", "Displacement", "height", "Height", "DisplaceHeightField", "disp"]
+    base_colour_filters = keywords.keywords["base_colour"]
+    metalness_filters = keywords.keywords["metalness"]
+    roughness_filters = keywords.keywords["roughness"]
+    normal_filters = keywords.keywords["normal"]
+    opacity_filters = keywords.keywords["opacity"]
+    emission_filters = keywords.keywords["emission"]
+    ao_filters = keywords.keywords["ao"]
+    displacement_filters = keywords.keywords["displacement"]
 
     selected_filter = "Images ( )"
 
@@ -68,7 +71,7 @@ class MainToolWindow(QtWidgets.QDialog):
         self.material_suffix_le = QtWidgets.QLineEdit("_mat")
         # render options box
         self.renderer_cb = QtWidgets.QComboBox()
-        self.renderer_cb.addItems(["Redshift", "V-Ray", "Arnold", "Renderman", ])
+        self.renderer_cb.addItems(["V-Ray", "Redshift", "Arnold", "Renderman"])
         # folder buttons
         self.select_folder_btn = QtWidgets.QPushButton("Select Folder")
         self.select_multiple_files_btn = QtWidgets.QPushButton("Select Multiple Files")
@@ -82,13 +85,13 @@ class MainToolWindow(QtWidgets.QDialog):
         self.base_colour_btn.setToolTip("Select File")
         self.base_colour_btn.setIcon(QtGui.QIcon(":fileOpen.png"))
 
-        self.metallic_cb = QtWidgets.QCheckBox()
-        self.metallic_cb.setChecked(True)
-        self.metallic_le = QtWidgets.QLineEdit()
-        self.metallic_UDIM_cb = QtWidgets.QCheckBox("UDIM")
-        self.metallic_btn = QtWidgets.QPushButton()
-        self.metallic_btn.setToolTip("Select File")
-        self.metallic_btn.setIcon(QtGui.QIcon(":fileOpen.png"))
+        self.metalness_cb = QtWidgets.QCheckBox()
+        self.metalness_cb.setChecked(True)
+        self.metalness_le = QtWidgets.QLineEdit()
+        self.metalness_UDIM_cb = QtWidgets.QCheckBox("UDIM")
+        self.metalness_btn = QtWidgets.QPushButton()
+        self.metalness_btn.setToolTip("Select File")
+        self.metalness_btn.setIcon(QtGui.QIcon(":fileOpen.png"))
 
         self.roughness_cb = QtWidgets.QCheckBox()
         self.roughness_cb.setChecked(True)
@@ -139,7 +142,7 @@ class MainToolWindow(QtWidgets.QDialog):
         material_suffix_layout = QtWidgets.QHBoxLayout()
         material_suffix_layout.addWidget(self.material_suffix_le)
         material_layout = QtWidgets.QFormLayout()
-        material_layout.addRow("Material Prefix: ", material_prefix_layout)
+        material_layout.addRow("Material Name: ", material_prefix_layout)
         material_layout.addRow("Material Suffix: ", material_suffix_layout)
 
         top_button_layout = QtWidgets.QHBoxLayout()
@@ -160,17 +163,17 @@ class MainToolWindow(QtWidgets.QDialog):
         base_colour_layout.addRow(base_colour_layout_top)
         base_colour_layout.addRow(base_colour_layout_bot)
 
-        metallic_layout_top = QtWidgets.QHBoxLayout()
-        metallic_layout_top.addWidget(self.metallic_cb)
-        metallic_layout_top.addWidget(self.metallic_le)
-        metallic_layout_top.addWidget(self.metallic_btn)
+        metalness_layout_top = QtWidgets.QHBoxLayout()
+        metalness_layout_top.addWidget(self.metalness_cb)
+        metalness_layout_top.addWidget(self.metalness_le)
+        metalness_layout_top.addWidget(self.metalness_btn)
 
-        metallic_layout_bot = QtWidgets.QHBoxLayout()
-        metallic_layout_bot.addWidget(self.metallic_UDIM_cb)
+        metalness_layout_bot = QtWidgets.QHBoxLayout()
+        metalness_layout_bot.addWidget(self.metalness_UDIM_cb)
 
-        metallic_layout = QtWidgets.QFormLayout()
-        metallic_layout.addRow(metallic_layout_top)
-        metallic_layout.addRow(metallic_layout_bot)
+        metalness_layout = QtWidgets.QFormLayout()
+        metalness_layout.addRow(metalness_layout_top)
+        metalness_layout.addRow(metalness_layout_bot)
 
         roughness_layout_top = QtWidgets.QHBoxLayout()
         roughness_layout_top.addWidget(self.roughness_cb)
@@ -235,7 +238,7 @@ class MainToolWindow(QtWidgets.QDialog):
         form_layout.addRow(material_layout)
         form_layout.addRow(top_button_layout)
         form_layout.addRow("Base Colour:", base_colour_layout)
-        form_layout.addRow("Metallic: ", metallic_layout)
+        form_layout.addRow("Metalness: ", metalness_layout)
         form_layout.addRow("Roughness: ", roughness_layout)
         form_layout.addRow("Opacity: ", opacity_layout)
         form_layout.addRow("Normal: ", normal_layout)
@@ -260,7 +263,7 @@ class MainToolWindow(QtWidgets.QDialog):
 
         # file paths
         self.base_colour_btn.clicked.connect(self.show_file_select_base_colour)
-        self.metallic_btn.clicked.connect(self.show_file_select_metallic)
+        self.metalness_btn.clicked.connect(self.show_file_select_metalness)
         self.roughness_btn.clicked.connect(self.show_file_select_roughness)
         self.opacity_btn.clicked.connect(self.show_file_select_opacity)
         self.normal_btn.clicked.connect(self.show_file_select_normal)
@@ -268,7 +271,7 @@ class MainToolWindow(QtWidgets.QDialog):
 
         # checkbox connections
         self.base_colour_cb.toggled.connect(self.update_base_colour_visibility)
-        self.metallic_cb.toggled.connect(self.update_metallic_visibility)
+        self.metalness_cb.toggled.connect(self.update_metalness_visibility)
         self.roughness_cb.toggled.connect(self.update_roughness_visibility)
         self.opacity_cb.toggled.connect(self.update_opacity_visibility)
         self.normal_cb.toggled.connect(self.update_normal_visibility)
@@ -285,9 +288,9 @@ class MainToolWindow(QtWidgets.QDialog):
         self.base_colour_le.setEnabled(checked)
         self.base_colour_btn.setEnabled(checked)
 
-    def update_metallic_visibility(self, checked):
-        self.metallic_le.setEnabled(checked)
-        self.metallic_btn.setEnabled(checked)
+    def update_metalness_visibility(self, checked):
+        self.metalness_le.setEnabled(checked)
+        self.metalness_btn.setEnabled(checked)
 
     def update_roughness_visibility(self, checked):
         self.roughness_le.setEnabled(checked)
@@ -316,12 +319,12 @@ class MainToolWindow(QtWidgets.QDialog):
             # adding the returned file path to the line edit
             self.base_colour_le.setText(file_path)
 
-    def show_file_select_metallic(self):
+    def show_file_select_metalness(self):
         file_path, self.selected_filter = QtWidgets.QFileDialog.getOpenFileName(
             self, "Select File", "", self.FILE_FILTERS, self.selected_filter)
 
         if file_path:
-            self.metallic_le.setText(file_path)
+            self.metalness_le.setText(file_path)
 
     def show_file_select_roughness(self):
         file_path, self.selected_filter = QtWidgets.QFileDialog.getOpenFileName(
@@ -351,19 +354,30 @@ class MainToolWindow(QtWidgets.QDialog):
         if file_path:
             self.displacement_le.setText(file_path)
 
-    # top buttons for quick assignment
-
     def file_scanner(self, directory, specific_filters, file_list, mapType, folder=True):
+        """
+        Takes either the directory or file list and checks the file names to see if they
+        match up to any of the specified keywords
+        Args:
+            directory: str
+            specific_filters: list, taken from an entry in the keywords dictionary
+            file_list: list
+            mapType:
+            folder: path, determined by the select folder button
+        """
         self.mapType = mapType
         self.specific_filters = specific_filters
         self.directory = directory
 
         located_file = []
         for file in file_list:
-            lower = file.lower()
+            file_name = os.path.basename(file).lower()
+
             for search_filter in specific_filters:
-                if search_filter in file:
+                if search_filter.lower() in file_name:
                     located_file.append(file)
+                    print(search_filter)
+                    break
 
         if folder:
             if len(located_file) == 1:
@@ -378,8 +392,6 @@ class MainToolWindow(QtWidgets.QDialog):
                 print(f"More than 1 file located: {located_file}")
         return None
 
-
-
     def select_folder(self):
 
         self.defined_files, self.directory = self.folder_popup()
@@ -387,8 +399,8 @@ class MainToolWindow(QtWidgets.QDialog):
         base_colour_assign = self.file_scanner(self.directory,
                                                self.base_colour_filters, self.defined_files, self.base_colour_le)
 
-        metallic_assign = self.file_scanner(self.directory,
-                                            self.metallic_filters, self.defined_files, self.metallic_le)
+        metalness_assign = self.file_scanner(self.directory,
+                                            self.metalness_filters, self.defined_files, self.metalness_le)
 
         roughness_assign = self.file_scanner(self.directory,
                                              self.roughness_filters, self.defined_files, self.roughness_le)
@@ -429,8 +441,8 @@ class MainToolWindow(QtWidgets.QDialog):
                                                self.base_colour_filters, self.defined_files, self.base_colour_le,
                                                folder=False)
 
-        metallic_assign = self.file_scanner(self.directory,
-                                            self.metallic_filters, self.defined_files, self.metallic_le, folder=False)
+        metalness_assign = self.file_scanner(self.directory,
+                                            self.metalness_filters, self.defined_files, self.metalness_le, folder=False)
 
         roughness_assign = self.file_scanner(self.directory,
                                              self.roughness_filters, self.defined_files, self.roughness_le,
@@ -457,13 +469,26 @@ class MainToolWindow(QtWidgets.QDialog):
     def get_material_suffix_name(self):
         return (self.material_suffix_le.text())
 
-    # retrieving the selected file names ready to be input into the file nodes
+    # retrieving the selected file names for sending out
+    def texture_paths(self):
+        all_paths =  {
+            "base_colour": self.base_colour_file_path(),
+            "metalness": self.metalness_file_path(),
+            "roughness": self.roughness_file_path(),
+            "opacity": self.opacity_file_path(),
+            "normal": self.normal_file_path(),
+            "displacement": self.displacement_file_path()
+        }
+        return {texture_type: texture_path
+                for texture_type, texture_path in all_paths.items()
+                if texture_path}
+
 
     def base_colour_file_path(self):
         return (self.base_colour_le.text())
 
-    def metallic_file_path(self):
-        return (self.metallic_le.text())
+    def metalness_file_path(self):
+        return (self.metalness_le.text())
 
     def roughness_file_path(self):
         return (self.roughness_le.text())
@@ -484,25 +509,29 @@ class MainToolWindow(QtWidgets.QDialog):
         self.creatingMaterial()
         self.close()
 
+    ### creating the material based on the selected renderer and the current file inputs
+
     def creatingMaterial(self):
+        self.selected_objects = cmds.ls(sl=True)
         render_engine = self.renderer()
-        texture_paths = {
-            "basecolor": self.base_colour_file_path(),
-            "metalness": self.metallic_file_path(),
-            "roughness": self.roughness_file_path(),
-            "opacity": self.opacity_file_path(),
-            "normal": self.normal_file_path(),
-            "height": self.displacement_file_path()
-        }
-        name = self.material_prefix_le
+        texture_paths = self.texture_paths()
+
+        self.materialCustomPrefix = self.get_material_prefix_name()
+        if len(self.materialCustomPrefix) == 0:
+            self.materialCustomPrefix = "Material"
+
         renderers = {
-            "Redshift": Maya_MaterialSetup_Redshift,
-            "V-Ray": Maya_MaterialSetup_Vray,
+            "V-Ray": MaterialSetup_Vray,
+            "Redshift": MaterialSetup_Redshift,
             #"Arnold": Maya_MaterialSetup_Arnold,
             #"Renderman": Maya_MaterialSetup_Renderman
         }
+        specified_renderer = renderers[self.renderer()].createMaterial(name=self.materialCustomPrefix, data=texture_paths)
 
-        renderers[self.renderer()].createMaterial(name, texture_paths)
+        if self.assign_obj_cb.isChecked():
+            for object in self.selected_objects:
+                cmds.select(object)
+                cmds.hyperShade(assign=specified_renderer)
 
 if __name__ == "__main__":
     try:

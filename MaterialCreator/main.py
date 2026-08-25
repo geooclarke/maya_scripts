@@ -1,4 +1,7 @@
-from ui import MainToolWindow
+import ui
+import importlib
+importlib.reload(ui)
+importlib.reload(keywords)
 
 try:
     Mat_Create.close()  # pylint: disable=E0601
@@ -6,5 +9,5 @@ try:
 except:
     pass
 
-Mat_Create = MainToolWindow()
+Mat_Create = ui.MainToolWindow()
 Mat_Create.show()
