@@ -1,12 +1,24 @@
 import maya.cmds as cmds
 import sys
 import maya.OpenMayaUI as omui
-import PySide2
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
 
-import Maya_MaterialSetup_Redshift
+from MaterialCreator import Maya_MaterialSetup_Redshift
+from MaterialCreator import Maya_MaterialSetup_Vray
+
+try:
+    # Qt5
+    from PySide2 import QtCore
+    from PySide2 import QtWidgets
+    from PySide2 import QtGui
+    from shiboken2 import wrapInstance
+except:
+    # Qt6
+    from PySide6 import QtCore
+    from PySide6 import QtWidgets
+    from PySide6 import QtGui
+    from shiboken6 import wrapInstance
+
+# import Maya_MaterialSetup_Redshift
 
 
 def maya_main_window():
@@ -34,7 +46,7 @@ class MainToolWindow(QtWidgets.QDialog):
     def __init__(self, parent=maya_main_window()):
         super().__init__(parent)
 
-        self.setWindowTitle("Redshift Material Creation")
+        self.setWindowTitle("Material Creator")
         self.setMinimumSize(500, 600)
 
         self.rootDirectory = cmds.workspace(rootDirectory=True, query=True)
@@ -51,17 +63,17 @@ class MainToolWindow(QtWidgets.QDialog):
         self.create_connections()
 
     def create_widgets(self):
-        """ This creates all the widgets required for the UI.
-
-            Returns:
-
-        """
+        """ This creates all the widgets required for the UI. """
         self.material_prefix_le = QtWidgets.QLineEdit()
         self.material_suffix_le = QtWidgets.QLineEdit("_mat")
-
+        # render options box
+        self.renderer_cb = QtWidgets.QComboBox()
+        self.renderer_cb.addItems(["Redshift", "V-Ray", "Arnold", "Renderman", ])
+        # folder buttons
         self.select_folder_btn = QtWidgets.QPushButton("Select Folder")
         self.select_multiple_files_btn = QtWidgets.QPushButton("Select Multiple Files")
 
+        # each map type options box
         self.base_colour_cb = QtWidgets.QCheckBox()
         self.base_colour_cb.setChecked(True)
         self.base_colour_le = QtWidgets.QLineEdit()
@@ -110,6 +122,7 @@ class MainToolWindow(QtWidgets.QDialog):
         self.displacement_btn.setToolTip("Select File")
         self.displacement_btn.setIcon(QtGui.QIcon(":fileOpen.png"))
 
+        # bottom row and assign objects
         self.assign_obj_cb = QtWidgets.QCheckBox("Assign to Selected Objects")
 
         self.create_and_close_btn = QtWidgets.QPushButton("Create And Close")
@@ -117,11 +130,10 @@ class MainToolWindow(QtWidgets.QDialog):
         self.close_btn = QtWidgets.QPushButton("Close")
 
     def create_layouts(self):
-        """ This creates all the layouts for the UI.
+        """ This creates all the layouts for the UI. """
+        renderer_layout = QtWidgets.QHBoxLayout()
+        renderer_layout.addWidget(self.renderer_cb)
 
-            Returns:
-                Does not need to return anything given its use case.
-        """
         material_prefix_layout = QtWidgets.QHBoxLayout()
         material_prefix_layout.addWidget(self.material_prefix_le)
         material_suffix_layout = QtWidgets.QHBoxLayout()
@@ -219,6 +231,7 @@ class MainToolWindow(QtWidgets.QDialog):
         button_layout.addWidget(self.close_btn)
 
         form_layout = QtWidgets.QFormLayout()
+        form_layout.addRow("Renderer:", renderer_layout)
         form_layout.addRow(material_layout)
         form_layout.addRow(top_button_layout)
         form_layout.addRow("Base Colour:", base_colour_layout)
@@ -262,7 +275,7 @@ class MainToolWindow(QtWidgets.QDialog):
         self.displacement_cb.toggled.connect(self.update_displacement_visibility)
 
         # lower buttons
-        self.create_and_close_btn.clicked.connect(self.creatingMateralAndClose)
+        self.create_and_close_btn.clicked.connect(self.creatingMaterialAndClose)
         self.create_material_btn.clicked.connect(self.creatingMaterial)
         self.close_btn.clicked.connect(self.close)
 
@@ -340,14 +353,15 @@ class MainToolWindow(QtWidgets.QDialog):
 
     # top buttons for quick assignment
 
-    def file_scanner(self, directory, specificFilters, file_list, mapType, folder=True):
+    def file_scanner(self, directory, specific_filters, file_list, mapType, folder=True):
         self.mapType = mapType
-        self.specificFilters = specificFilters
+        self.specific_filters = specific_filters
         self.directory = directory
 
         located_file = []
         for file in file_list:
-            for search_filter in specificFilters:
+            lower = file.lower()
+            for search_filter in specific_filters:
                 if search_filter in file:
                     located_file.append(file)
 
@@ -364,25 +378,11 @@ class MainToolWindow(QtWidgets.QDialog):
                 print(f"More than 1 file located: {located_file}")
         return None
 
+
+
     def select_folder(self):
 
-        def folder_popup(self):
-            dir = QtWidgets.QFileDialog.getExistingDirectory(
-                self, "Select Folder", self.defaultFolder)
-            if dir:
-                self.defaultFolder = dir
-            files = ""
-
-            if dir:
-                directory = QtCore.QDir(dir)
-                directory.setNameFilters(self.image_filters)
-                files = directory.entryList()
-            else:
-                print("Please select a valid folder")
-
-            return files, dir
-
-        self.defined_files, self.directory = folder_popup(self)
+        self.defined_files, self.directory = self.folder_popup()
 
         base_colour_assign = self.file_scanner(self.directory,
                                                self.base_colour_filters, self.defined_files, self.base_colour_le)
@@ -401,6 +401,22 @@ class MainToolWindow(QtWidgets.QDialog):
 
         displacement_assign = self.file_scanner(self.directory,
                                                 self.displacement_filters, self.defined_files, self.displacement_le)
+
+    def folder_popup(self):
+        dir = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Select Folder", self.defaultFolder)
+        if dir:
+            self.defaultFolder = dir
+        files = ""
+
+        if dir:
+            directory = QtCore.QDir(dir)
+            directory.setNameFilters(self.image_filters)
+            files = directory.entryList()
+        else:
+            print("Please select a valid folder")
+
+        return files, dir
 
     def select_multiple_files(self):
         file_paths, self.selected_filter = QtWidgets.QFileDialog.getOpenFileNames(
@@ -432,6 +448,8 @@ class MainToolWindow(QtWidgets.QDialog):
 
         print(file_paths)
 
+    #### Define all getters required
+
     # retrieving the material prefix and suffix name text
     def get_material_prefix_name(self):
         return (self.material_prefix_le.text())
@@ -459,12 +477,32 @@ class MainToolWindow(QtWidgets.QDialog):
     def displacement_file_path(self):
         return (self.displacement_le.text())
 
-def creatingMaterial(self):
-    self.redshiftMaterial = Maya_MaterialSetup_Redshift.createMaterial()
+    def renderer(self):
+        return self.renderer_cb.currentText()
 
-def creatingMateralAndClose(self):
-    self.redshiftMaterial = Maya_MaterialSetup_Redshift.createMaterial()
-    self.close()
+    def creatingMaterialAndClose(self):
+        self.creatingMaterial()
+        self.close()
+
+    def creatingMaterial(self):
+        render_engine = self.renderer()
+        texture_paths = {
+            "basecolor": self.base_colour_file_path(),
+            "metalness": self.metallic_file_path(),
+            "roughness": self.roughness_file_path(),
+            "opacity": self.opacity_file_path(),
+            "normal": self.normal_file_path(),
+            "height": self.displacement_file_path()
+        }
+        name = self.material_prefix_le
+        renderers = {
+            "Redshift": Maya_MaterialSetup_Redshift,
+            "V-Ray": Maya_MaterialSetup_Vray,
+            #"Arnold": Maya_MaterialSetup_Arnold,
+            #"Renderman": Maya_MaterialSetup_Renderman
+        }
+
+        renderers[self.renderer()].createMaterial(name, texture_paths)
 
 if __name__ == "__main__":
     try:
@@ -475,3 +513,7 @@ if __name__ == "__main__":
 
     Mat_Create = MainToolWindow()
     Mat_Create.show()
+
+
+
+

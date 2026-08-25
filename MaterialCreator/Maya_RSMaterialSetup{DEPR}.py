@@ -1,3 +1,5 @@
+## DEPRECATED ##
+
 # MayaRSMaterialSetup_v1.1.4
 # added a few more keywords to the filters to increase the chance of textures getting picked up straight away
 # to do: 

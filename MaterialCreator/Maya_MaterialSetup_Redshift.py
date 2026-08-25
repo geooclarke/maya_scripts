@@ -5,7 +5,7 @@ from maya import cmds
 ####################################
 
 
-def createMaterial(self):
+def createMaterial(self, name):
 
     self.selectedObjects = cmds.ls(sl=True)
     self.materialCustomPrefix = self.get_material_prefix_name()

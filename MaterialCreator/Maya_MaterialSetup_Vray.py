@@ -1,79 +1,17 @@
 import os
 import re
 from maya import cmds
-
-# ============================================================
-# SELECT TEXTURE FOLDER
-# ============================================================
-
-def choose_texture_folder():
-
-    result = cmds.fileDialog2(
-        dialogStyle=2,
-        fileMode=3,  # Folder selection
-        caption="Select Texture Folder"
-    )
-
-    if not result:
-        cmds.warning("No folder selected.")
-        return None
-
-    return result[0]
+import keywords
 
 # ============================================================
 # LOAD VRAY
 # ============================================================
 
 def ensure_vray():
-    if not cmds.pluginInfo("vrayformaya", q=True, loaded=True):
-        try:
-            cmds.loadPlugin("vrayformaya")
-        except:
-            raise RuntimeError("Could not load V-Ray")
-
-# ============================================================
-# FIND TEXTURES
-# ============================================================
-
-def find_materials(folder):
-    keywords = {
-        "basecolor": ["basecolor", "base_color", "albedo", "diffuse", "color", "diff"],
-        "opacity": ["opacity", "opac", "alpha", "mask", "transparency, cutout"],
-        "emission": ["emission", "emissive", "emit", "glow"],
-        "roughness": ["roughness", "rough"],
-        "metalness": ["metalness", "metallic", "metal"],
-        "normal": ["normal", "nrm", "nor"],
-        "ao": ["ao", "ambientocclusion", "ambient_occlusion", "occlusion"],
-        "height": ["height", "disp", "displacement"]
-    }
-
-    materials = {}
-
-    for file_name in os.listdir(folder):
-        ext = os.path.splitext(file_name)[1].lower()
-        if ext not in [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".exr"]:
-            continue
-
-        lower = file_name.lower()
-
-        for map_type, names in keywords.items():
-            matched = False
-            for word in names:
-                if word in lower:
-                    prefix = re.split(word, lower)[0]
-                    prefix = prefix.rstrip("_- .")
-                    if prefix not in materials:
-                        materials[prefix] = {}
-                    materials[prefix][map_type] = os.path.join(
-                        folder,
-                        file_name
-                    )
-                    matched = True
-                    break
-            if matched:
-                break
-
-    return materials
+    if cmds.pluginInfo("vrayformaya", q=True, loaded=True):
+        print("Vray Loaded")
+    else:
+        raise RuntimeError("Could not load V-Ray")
 
 # ============================================================
 # CREATE FILE NODE
@@ -82,7 +20,7 @@ def find_materials(folder):
 def create_texture_node(name, filepath, raw=False):
     file_node = cmds.shadingNode("file", asTexture=True, name=f"{name}_file")
     place = cmds.shadingNode("place2dTexture", asUtility=True, name=f"{name}_place2d")
-    cc = cmds.shadingNode("VRayColorCorrection", asTexture=True, name=f"{name}_CC")
+    colour_correction = cmds.shadingNode("VRayColorCorrection", asTexture=True, name=f"{name}_CC")
 
     cmds.connectAttr(f"{place}.outUV", f"{file_node}.uvCoord", f=True)
     cmds.connectAttr(f"{place}.outUvFilterSize", f"{file_node}.uvFilterSize", f=True)
@@ -91,7 +29,7 @@ def create_texture_node(name, filepath, raw=False):
     cmds.setAttr(f"{file_node}.colorSpace", "Utility - sRGB - Texture", type="string")
     cmds.setAttr(f"{file_node}.ignoreColorSpaceFileRules", 1)
 
-    cmds.connectAttr(f"{file_node}.outColor", f"{cc}.texture_map", f=True)
+    cmds.connectAttr(f"{file_node}.outColor", f"{colour_correction}.texture_map", f=True)
 
     if raw:
         try:
@@ -99,7 +37,7 @@ def create_texture_node(name, filepath, raw=False):
         except:
             pass
 
-    return cc
+    return colour_correction
 
 # ============================================================
 # BUILD MATERIAL
@@ -199,25 +137,12 @@ def build_material(material_name, data):
 
 
 # ============================================================
-# MAIN
+# MAIN BUILD
 # ============================================================
 
-def build_all_materials(texture_folder):
-
+def createMaterial(name, data ):
     ensure_vray()
-    mats = find_materials(texture_folder)
-
-    for mat_name, data in mats.items():
-        clean_name = mat_name.title().replace(" ", "_")
-        print("Building:", clean_name)
-        build_material(clean_name, data)
+    print("Material Built")
+    return build_material(name, data)
 
 
-# ============================================================
-# RUN
-# ============================================================
-
-texture_folder = choose_texture_folder()
-
-if texture_folder:
-    build_all_materials(texture_folder)
