@@ -42,6 +42,7 @@ distDimParent = cmds.rename(distDimParent, f"{camName}_DoF")
 
 # creating the expression connected to the original camera
 cmds.expression(s=f"{camShape}.focusDistance = {distDimParent}.distance")
+cmds.expression(s=f"{camShape}.vrayCameraPhysicalFocusDistance = {distDimParent}.distance")
 
 # parenting the first locator to the camera
 cmds.parent(loc_1, selectedCam[0])
