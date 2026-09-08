@@ -125,8 +125,9 @@ class MainToolWindow(QtWidgets.QDialog):
         self.displacement_btn.setToolTip("Select File")
         self.displacement_btn.setIcon(QtGui.QIcon(":fileOpen.png"))
 
-        # bottom row and assign objects
+        # BOTTOM ROW, assign objects and clear file paths button
         self.assign_obj_cb = QtWidgets.QCheckBox("Assign to Selected Objects")
+        self.clear_file_paths_btn = QtWidgets.QPushButton("Clear File Paths")
 
         self.create_and_close_btn = QtWidgets.QPushButton("Create And Close")
         self.create_material_btn = QtWidgets.QPushButton("Create Material")
@@ -227,6 +228,8 @@ class MainToolWindow(QtWidgets.QDialog):
 
         global_options_layout = QtWidgets.QHBoxLayout()
         global_options_layout.addWidget(self.assign_obj_cb)
+        global_options_layout.addWidget(self.clear_file_paths_btn)
+        global_options_layout.setSpacing(2)
 
         button_layout = QtWidgets.QHBoxLayout()
         button_layout.addWidget(self.create_and_close_btn)
@@ -483,6 +486,8 @@ class MainToolWindow(QtWidgets.QDialog):
                 for texture_type, texture_path in all_paths.items()
                 if texture_path}
 
+    def clear_file_paths(self):
+        self.base_colour_le.setText("")
 
     def base_colour_file_path(self):
         return (self.base_colour_le.text())
